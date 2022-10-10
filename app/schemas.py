@@ -1,4 +1,7 @@
 from pydantic import BaseModel,EmailStr
+from typing import Union
+from datetime import datetime
+
 
 class PostBase(BaseModel):
     title:str
@@ -12,10 +15,22 @@ class PostUpdate(PostBase):
 
 # ctrl + D
 
+class User(BaseModel):
+    id:int
+    email:EmailStr
+    created_at:datetime
+    class Config:
+        orm_mode=True
+
+
 class Post(BaseModel):
+    id:int
     title:str
     content:str
-    id:int
+    published:bool
+    owner_id:int
+    owner: User
+
 
     class Config:
         orm_mode=True
@@ -25,9 +40,32 @@ class UserCreate(BaseModel):
     email:EmailStr
     password:str
 
+class UserVerify(UserCreate):
+    pass
 
-class User(BaseModel):
-    email:EmailStr
-    id:int
-    class Config:
-        orm_mode=True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    id: Union[str, None] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
