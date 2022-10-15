@@ -1,15 +1,16 @@
 from .database import LocalSession,engine
 from fastapi import FastAPI,Request,Response
 from . import models
-from .routers import posts, users
+from .routers import posts, users, votes
 
 
-
-models.Base.metadata.create_all(bind=engine)
+# disabled for Alembic
+# models.Base.metadata.create_all(bind=engine)
 
 app=FastAPI()
 app.include_router(users.router)
 app.include_router(posts.router)
+app.include_router(votes.router)
 
 @app.middleware("http")
 async def db_session_middleware(request: Request, call_next):

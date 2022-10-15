@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from typing import List
 from .. import auth
+
 router=APIRouter(
     prefix="/users",
     tags=["users"]
@@ -26,9 +27,20 @@ async def create_user(user:schemas.UserCreate, db:Session=Depends(get_db)):
 @router.get("/",
     status_code=status.HTTP_200_OK,
     response_model=List[schemas.User])
-async def get_users(db:Session=Depends(get_db),
-                    user_id:int=Depends(auth.get_current_user)):
+async def get_users(db:Session=Depends(get_db)):
     return db.query(models.User).all()
+
+# fetch current user
+@router.get("/me",
+    status_code=status.HTTP_302_FOUND,
+    response_model=schemas.User)
+async def get_current_user(db:Session=Depends(get_db),user:int=Depends(auth.get_current_user)):
+    current_user=db.query(models.User).filter(models.User.id==user.id).first()
+    if current_user==None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+        detail=f'User with id-{id} not found')
+    return current_user
+
 
 # fetch one user
 @router.get("/{id}",
@@ -40,8 +52,7 @@ async def get_user(id:int,db:Session=Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
         detail=f'User with id-{id} not found')
     return user
-
-
+    
 # user login
 @router.post("/login",response_model=schemas.Token)
 async def login(user_credentials:schemas.UserVerify,

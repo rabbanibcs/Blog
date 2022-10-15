@@ -1,10 +1,13 @@
+from cProfile import label
+from itertools import groupby
+from re import L
 from fastapi import APIRouter,Depends,Request,Response,HTTPException,status
 from .. import models,schemas,utils
 from sqlalchemy.orm import Session
 from ..database import get_db
 from typing import List
 from ..auth import get_current_user
-
+from sqlalchemy import or_,and_,any_,text,func
 
 router=APIRouter(
     prefix="/posts",
@@ -23,24 +26,28 @@ async def create_post(post:schemas.PostCreate,
     db.refresh(new_post)
     return new_post
 
-# fetch all post
-@router.get("/",response_model=List[schemas.Post])
+# fetch all post         %20 for space
+@router.get("/",response_model=List[schemas.PostsOut])
 async def get_posts(db:Session=Depends(get_db),
-                    user:int=Depends(get_current_user)):
-    print('user id->',user.id)
-    posts=db.query(models.Post).all()
-    from sqlalchemy import inspect
-    insp = inspect(models.Post)
-    return posts
+                    user:int=Depends(get_current_user),limit:int=10,skip:int=0,search:str=""):
+    print(search)
+    query=db.query(models.Post,func.count(models.Vote.post_id).label("votes")
+    ).filter(models.Post.title.contains(search)).join(models.Vote,models.Vote.post_id==models.Post.id,isouter=True).group_by(models.Post.id).limit(limit).offset(skip)
+    print(query)
+    
+    return query.all()
 
 # fetch a post
-@router.get("/{post_id}",response_model=schemas.Post)
-async def get_post(post_id:int,db:Session=Depends(get_db),
+# @router.get("/{post_id}")
+@router.get("/{id}",response_model=schemas.PostOut)
+async def get_post(id:int,db:Session=Depends(get_db),
                     user:int=Depends(get_current_user)):
-    query=db.query(models.Post).filter(models.Post.id==post_id)
+    query=db.query(models.Post,func.count(models.Vote.user_id).label("votes")).join(
+        models.Vote,models.Post.id==models.Vote.post_id,isouter=True).filter(models.Post.id==id).group_by(models.Post.id)
+    # print(query)
     if query.first()==None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-        detail=f'Post with id-{post_id} not found')
+        detail=f'Post with id-{id} not found')
     return query.first()
 
 # update a post

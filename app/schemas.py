@@ -1,5 +1,6 @@
-from pydantic import BaseModel,EmailStr
-from typing import Union
+from unicodedata import name
+from pydantic import BaseModel,EmailStr,validator
+from typing import Union,Optional
 from datetime import datetime
 
 
@@ -17,8 +18,9 @@ class PostUpdate(PostBase):
 
 class User(BaseModel):
     id:int
+    name:str
     email:EmailStr
-    created_at:datetime
+    
     class Config:
         orm_mode=True
 
@@ -28,21 +30,34 @@ class Post(BaseModel):
     title:str
     content:str
     published:bool
-    owner_id:int
     owner: User
-
 
     class Config:
         orm_mode=True
 
 
-class UserCreate(BaseModel):
+class PostsOut(BaseModel):
+    Post:Post
+    votes:int
+
+    class Config:
+        orm_mode=True
+
+class PostOut(BaseModel):
+    Post:Post
+    votes:int
+
+    class Config:
+        orm_mode=True
+
+
+class UserVerify(BaseModel):
     email:EmailStr
     password:str
 
-class UserVerify(UserCreate):
-    pass
-
+class UserCreate(UserVerify):
+    name:str
+    
 
 class Token(BaseModel):
     access_token: str
@@ -52,6 +67,15 @@ class TokenData(BaseModel):
     id: Union[str, None] = None
 
 
+class Vote(BaseModel):
+    post_id:int
+    like:int
+
+    @validator('like')
+    def validate_like(cls, v):
+        if v not in [0,1]:
+            raise ValueError('[like] Must be 0 or 1.')
+        return v
 
 
 
